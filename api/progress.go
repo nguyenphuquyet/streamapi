@@ -3,11 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -147,6 +149,101 @@ func HandleUploadProgress(c *gin.Context) {
 			if pct != lastPct || stage != lastStage {
 				writeSSEEvent(c.Writer, stage, pct, msg)
 				flusher.Flush()
+				lastPct = pct
+				lastStage = stage
+			}
+		}
+	}
+}
+
+// ─── HTTP Handler: WebSocket endpoint (Upload API) ─────────────────────────
+
+var wsUpgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	// Upload API được thiết kế để app/web khác gọi vào, nên cho phép mọi origin.
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+type wsProgressPayload struct {
+	Stage   string `json:"stage"` // "receiving" | "telegram" | "done" | "error"
+	Pct     int    `json:"pct"`
+	Message string `json:"message"`
+}
+
+// HandleUploadAPIProgressWS stream tiến trình upload qua WebSocket cho Upload API
+// (Bearer token). Cách dùng:
+//  1. Client tự sinh một uploadId ngẫu nhiên (vd: uuid).
+//  2. Mở kết nối WS tới /api/upload-api/progress/:uploadId?token=<api_token> TRƯỚC.
+//  3. POST /api/upload-api/upload kèm field "uploadId" trùng giá trị ở bước 1.
+//  4. Server sẽ push JSON {"stage","pct","message"} qua WS mỗi khi tiến trình
+//     thay đổi, kết thúc bằng stage "done" hoặc "error".
+//
+// Việc xác thực (RequireAPITokenWS) đã chạy trước khi handler này được gọi.
+func HandleUploadAPIProgressWS(c *gin.Context) {
+	uploadID := c.Param("uploadId")
+
+	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("[ws-progress] Lỗi upgrade kết nối: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	// Đợi tối đa 10s để state xuất hiện, phòng trường hợp client mở WS trước
+	// khi POST /api/upload-api/upload kịp tạo progressState (race hiếm gặp).
+	var st *progressState
+	for i := 0; i < 100; i++ {
+		st = hub.get(uploadID)
+		if st != nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if st == nil {
+		_ = conn.WriteJSON(wsProgressPayload{Stage: "error", Message: "Upload session không tồn tại hoặc đã hết hạn"})
+		return
+	}
+
+	// Goroutine đọc message từ client chỉ để phát hiện khi client đóng kết nối
+	// (và để gorilla/websocket tự xử lý ping/pong control frame).
+	closed := make(chan struct{})
+	go func() {
+		defer close(closed)
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}()
+
+	send := func(stage string, pct int, msg string) bool {
+		_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		return conn.WriteJSON(wsProgressPayload{Stage: stage, Pct: pct, Message: msg}) == nil
+	}
+
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+
+	lastPct := -1
+	lastStage := ""
+
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			return
+		case <-closed:
+			return
+		case <-st.doneCh:
+			stage, pct, msg := st.snapshot()
+			send(stage, pct, msg)
+			return
+		case <-ticker.C:
+			stage, pct, msg := st.snapshot()
+			if pct != lastPct || stage != lastStage {
+				if !send(stage, pct, msg) {
+					return
+				}
 				lastPct = pct
 				lastStage = stage
 			}

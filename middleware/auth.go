@@ -66,6 +66,41 @@ func RequireAPIToken() gin.HandlerFunc {
 	}
 }
 
+// RequireAPITokenWS kiểm tra token cho WebSocket progress endpoint của Upload API.
+// WebSocket handshake từ trình duyệt KHÔNG gửi được header Authorization, nên
+// token được chấp nhận qua query string (?token=...). Vẫn hỗ trợ header
+// Authorization: Bearer cho các client không phải trình duyệt (script, CLI...).
+func RequireAPITokenWS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := strings.TrimSpace(c.Query("token"))
+
+		if token == "" {
+			if authHeader := c.GetHeader("Authorization"); authHeader != "" {
+				parts := strings.SplitN(authHeader, " ", 2)
+				if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+					token = strings.TrimSpace(parts[1])
+				}
+			}
+		}
+
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Thiếu token (query ?token= hoặc header Authorization)"})
+			c.Abort()
+			return
+		}
+
+		user, err := database.GetUserByAPIToken(token)
+		if err != nil || user == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ"})
+			c.Abort()
+			return
+		}
+
+		c.Set(UserKey, user)
+		c.Next()
+	}
+}
+
 // GetUser lấy user hiện tại từ context
 func GetUser(c *gin.Context) *database.User {
 	if u, exists := c.Get(UserKey); exists {

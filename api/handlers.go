@@ -184,9 +184,6 @@ func toFileDTO(f *database.FileRecord) FileDTO {
 		ShareToken: f.ShareToken,
 		UploadedAt: utils.FormatTime(f.UploadedAt),
 	}
-	if f.ThumbPath != "" {
-		dto.ThumbURL = "/static/thumbs/" + filepath.Base(f.ThumbPath)
-	}
 	return dto
 }
 
@@ -358,14 +355,9 @@ func HandleAPIDeleteFile(c *gin.Context) {
 	}
 
 	// Kiểm tra file thuộc về user này
-	file, err := database.GetFileByIDAndUser(id, user.ID)
-	if err != nil {
+	if _, err := database.GetFileByIDAndUser(id, user.ID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy file"})
 		return
-	}
-
-	if file.ThumbPath != "" {
-		os.Remove(file.ThumbPath)
 	}
 
 	if err := database.DeleteFile(id); err != nil {
@@ -510,7 +502,6 @@ func processUpload(ctx context.Context, userID int64, fileHeader *multipart.File
 	var tmpPath string
 	var tmpFile *os.File
 	var duration, width, height int
-	var thumbPath string
 
 	if isVideo && cfg.FFmpegPath != "disabled" {
 		tmpPath = filepath.Join(cfg.TempDir, safeName)
@@ -519,12 +510,6 @@ func processUpload(ctx context.Context, userID int64, fileHeader *multipart.File
 			tmpFile, err = os.Open(tmpPath)
 			if err == nil {
 				duration, width, height = utils.GetVideoInfo(cfg.FFmpegPath, tmpPath)
-
-				thumbName := fmt.Sprintf("%d_thumb.jpg", time.Now().UnixNano())
-				thumbFull := filepath.Join(cfg.ThumbsDir, thumbName)
-				if err3 := utils.GenerateVideoThumbnail(cfg.FFmpegPath, tmpPath, thumbFull); err3 == nil {
-					thumbPath = thumbFull
-				}
 				f.Seek(0, io.SeekStart)
 			} else {
 				log.Printf("[upload] Warning: Không thể mở temp file %s: %v", tmpPath, err)
@@ -591,7 +576,6 @@ func processUpload(ctx context.Context, userID int64, fileHeader *multipart.File
 		FileID:       result.FileID,
 		AccessHash:   result.AccessHash,
 		FileRef:      result.FileRef,
-		ThumbPath:    thumbPath,
 		IsVideo:      isVideo,
 		Duration:     duration,
 		Width:        width,
@@ -729,17 +713,11 @@ func HandleSharePage(c *gin.Context) {
 	}
 	streamURL := fmt.Sprintf("%s://%s/stream/%d", scheme, c.Request.Host, file.ID)
 
-	var thumbURL string
-	if file.ThumbPath != "" {
-		thumbURL = "/static/thumbs/" + filepath.Base(file.ThumbPath)
-	}
-
 	c.HTML(http.StatusOK, "share.html", gin.H{
 		"title":     file.OriginalName + " - TeleCloud",
 		"file":      file,
 		"sizeStr":   utils.FormatSize(file.Size),
 		"streamURL": streamURL,
-		"thumbURL":  thumbURL,
 	})
 }
 
@@ -754,16 +732,19 @@ func HandleAPIGetSettings(c *gin.Context) {
 
 	cfg := config.App
 	scheme := "http"
+	wsScheme := "ws"
 	if c.Request.TLS != nil {
 		scheme = "https"
+		wsScheme = "wss"
 	}
 	host := c.Request.Host
 
 	c.JSON(http.StatusOK, gin.H{
-		"username":      user.Username,
-		"api_token":     user.APIToken,
-		"upload_url":    fmt.Sprintf("%s://%s/api/upload-api/upload", scheme, host),
-		"max_upload_mb": cfg.MaxUploadSizeMB,
+		"username":        user.Username,
+		"api_token":       user.APIToken,
+		"upload_url":      fmt.Sprintf("%s://%s/api/upload-api/upload", scheme, host),
+		"ws_progress_url": fmt.Sprintf("%s://%s/api/upload-api/progress/{uploadId}?token=%s", wsScheme, host, user.APIToken),
+		"max_upload_mb":   cfg.MaxUploadSizeMB,
 	})
 }
 
@@ -814,6 +795,7 @@ func HandleUploadAPI(c *gin.Context) {
 	user := middleware.GetUser(c)
 	path := utils.CleanPath(c.PostForm("path"))
 	shareMode := c.PostForm("share")
+	uploadID := c.PostForm("uploadId")
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -821,10 +803,24 @@ func HandleUploadAPI(c *gin.Context) {
 		return
 	}
 
-	_, id, err := processUpload(c.Request.Context(), user.ID, fileHeader, path, nil)
+	// Nếu client gửi kèm uploadId, tạo progressState để client có thể theo dõi
+	// tiến trình qua WebSocket tại /api/upload-api/progress/:uploadId.
+	var st *progressState
+	if uploadID != "" {
+		st = hub.newProgressState(uploadID)
+	}
+
+	_, id, err := processUpload(c.Request.Context(), user.ID, fileHeader, path, st)
 	if err != nil {
+		if st != nil {
+			st.finish("error", err.Error())
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	if st != nil {
+		st.finish("done", "Hoàn thành")
 	}
 
 	resp := gin.H{

@@ -472,6 +472,62 @@ input{font-family:inherit}
   display:flex;align-items:center;gap:8px;margin-bottom:12px;
 }
 
+/* API Docs modal */
+.api-docs-link{
+  display:flex;align-items:center;gap:6px;
+  background:transparent;border:none;color:var(--blue);
+  font-size:.8rem;font-weight:500;cursor:pointer;padding:8px 0 0;
+}
+.api-docs-link:hover{text-decoration:underline}
+.docs-section{margin-bottom:22px}
+.docs-section:last-child{margin-bottom:0}
+.docs-section-head{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.docs-method{
+  font-family:'Roboto Mono',monospace;
+  font-size:.68rem;font-weight:700;
+  padding:3px 8px;border-radius:4px;color:#fff;flex-shrink:0;
+}
+.docs-method.get{background:var(--blue)}
+.docs-method.post{background:var(--green)}
+.docs-path{
+  font-family:'Roboto Mono',monospace;font-size:.8rem;
+  color:var(--text-primary);word-break:break-all;
+}
+.docs-desc{font-size:.8rem;color:var(--text-secondary);margin:0 0 10px}
+.docs-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:10px}
+.docs-table th,.docs-table td{
+  text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);
+  vertical-align:top;
+}
+.docs-table th{color:var(--text-tertiary);font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.3px}
+.docs-table td{color:var(--text-primary)}
+.docs-table code{font-family:'Roboto Mono',monospace;font-size:.75rem;color:var(--purple)}
+.docs-tag{
+  display:inline-block;font-size:.65rem;font-weight:500;
+  padding:1px 6px;border-radius:10px;margin-left:6px;
+}
+.docs-tag.required{background:#fce8e6;color:var(--red)}
+.docs-tag.optional{background:var(--bg-hover);color:var(--text-secondary)}
+.docs-steps{margin:0;padding-left:20px;font-size:.8rem;color:var(--text-secondary);line-height:1.7}
+.docs-divider{height:1px;background:var(--border);margin:20px 0}
+.docs-stage{font-family:'Roboto Mono',monospace;font-size:.72rem;color:var(--purple);background:var(--bg-sidebar);padding:2px 6px;border-radius:4px}
+.docs-copy-row{position:relative}
+.docs-copy-row .docs-copy-btn{
+  position:absolute;top:8px;right:8px;
+  width:28px;height:28px;border:none;background:#fff;border-radius:5px;
+  color:var(--text-secondary);cursor:pointer;font-size:.75rem;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow-1);
+}
+.docs-copy-row .docs-copy-btn:hover{color:var(--blue)}
+.docs-back{
+  display:flex;align-items:center;gap:6px;background:transparent;border:none;
+  color:var(--text-secondary);font-size:.8rem;cursor:pointer;padding:0;margin-bottom:4px;
+}
+.docs-back:hover{color:var(--text-primary)}
+
 /* Player modal */
 #playerModal .modal-card{background:transparent;box-shadow:none;max-width:960px}
 #playerTitle{color:#fff;font-family:var(--font-display);font-weight:400}
@@ -576,10 +632,156 @@ input{font-family:inherit}
 .bc-current:hover{background:transparent}
 .bc-sep{color:var(--text-tertiary);font-size:.75rem;padding:0 1px;display:flex;align-items:center}
 
+/* ───────────────────────── Bottom nav (mobile) ───────────────────────── */
+.bottom-nav{
+  display:none;
+}
+.fab-upload{
+  display:none;
+}
+
+/* ───────────────────────── Responsive: tablet ───────────────────────── */
 @media (max-width:840px){
   .sidebar{display:none}
   .brand-name{display:none}
   .main{padding:16px}
+}
+
+/* ───────────────────────── Responsive: mobile ───────────────────────── */
+@media (max-width:600px){
+  .topbar{
+    height:56px;
+    padding:0 10px;
+    gap:8px;
+  }
+  .brand{width:auto;padding:6px}
+  .brand-icon{width:28px;height:28px;font-size:19px}
+  .searchbar{margin:0}
+  .searchbar-inner{height:40px;padding:0 4px 0 14px}
+  #searchInput{font-size:.88rem}
+  .topbar-actions{width:auto;gap:0}
+  .icon-btn{width:36px;height:36px;font-size:.92rem}
+
+  .main{padding:12px 10px 112px}
+
+  .content-header{margin-bottom:4px;flex-wrap:wrap;gap:8px}
+  .breadcrumb{font-size:1rem;min-width:0}
+  .bc-item{max-width:42vw;display:inline-block;vertical-align:bottom;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #newFolderLabel{display:none !important}
+
+  .stats-row{padding:8px 2px;margin-bottom:10px}
+  #fileCount{font-size:.74rem}
+
+  /* Grid view: 2 columns stay, tighten gaps */
+  #fileGrid{gap:10px}
+  .file-info{padding:8px 10px}
+  .file-name{font-size:.78rem}
+  .file-meta{font-size:.68rem}
+
+  /* List view: drop the fixed-width meta column, stack instead */
+  .file-list-head{display:none}
+  .file-row{
+    height:auto;
+    min-height:56px;
+    padding:8px 8px;
+    gap:10px;
+  }
+  .file-row-icon{width:26px;font-size:1rem}
+  .file-row-name{
+    margin-right:0;
+    min-width:0;
+    font-size:.85rem;
+  }
+  .file-row-meta{
+    width:auto;
+    flex-shrink:0;
+    font-size:.7rem;
+    text-align:right;
+  }
+
+  /* Modals: full-width sheets with safe margins */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal-card{
+    margin:0;
+    max-width:100% !important;
+    border-radius:16px 16px 0 0;
+    max-height:92vh;
+    overflow-y:auto;
+  }
+  #playerModal.modal-overlay{align-items:center}
+  #playerModal .modal-card{
+    border-radius:0;
+    max-height:none;
+  }
+  .modal-header{padding:16px 16px 14px}
+  .modal-body{padding:16px}
+  .code-box{font-size:.68rem;word-break:break-all}
+  .field-row{flex-wrap:wrap}
+  .btn-icon-sq{width:38px;height:38px}
+
+  .drop-zone{padding:32px 16px}
+  .drop-zone i{font-size:2.1rem}
+
+  /* Context menu: bottom sheet style on touch */
+  .ctx-menu{
+    left:0 !important;right:0 !important;
+    bottom:0;top:auto !important;
+    min-width:0;
+    width:100%;
+    border-radius:16px 16px 0 0;
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  .ctx-item{padding:12px 20px;font-size:.9rem}
+
+  #toast{left:12px;right:12px;bottom:80px}
+
+  /* Bottom nav replaces sidebar */
+  .bottom-nav{
+    display:flex;
+    position:fixed;
+    left:0;right:0;bottom:0;
+    height:60px;
+    padding-bottom:env(safe-area-inset-bottom);
+    background:#fff;
+    border-top:1px solid var(--border);
+    z-index:45;
+  }
+  .bottom-nav-item{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    color:var(--text-secondary);
+    font-size:.68rem;
+    cursor:pointer;
+  }
+  .bottom-nav-item i{font-size:1.05rem}
+  .bottom-nav-item.active{color:var(--blue)}
+
+  /* Floating upload button replaces sidebar's "Tải lên" */
+  .fab-upload{
+    display:flex;
+    align-items:center;justify-content:center;
+    position:fixed;
+    right:16px;
+    bottom:calc(60px + env(safe-area-inset-bottom) + 16px);
+    width:56px;height:56px;
+    border-radius:50%;
+    background:var(--blue);
+    color:#fff;
+    border:none;
+    font-size:1.3rem;
+    box-shadow:var(--shadow-2);
+    z-index:46;
+    cursor:pointer;
+  }
+  .fab-upload:active{background:var(--blue-hover)}
+
+  .docs-table{font-size:.72rem}
+  .docs-table th,.docs-table td{padding:5px 4px}
+  .docs-path{font-size:.72rem}
 }
 </style>
 </head>
@@ -669,6 +871,27 @@ input{font-family:inherit}
   </main>
 </div>
 
+<!-- ─── Mobile bottom nav (thay sidebar) ───────────────────── -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-item active" onclick="loadFiles('/')">
+    <i class="fa-brands fa-telegram"></i>
+    <span>Của tôi</span>
+  </div>
+  <div class="bottom-nav-item">
+    <i class="fa fa-link"></i>
+    <span>Đã chia sẻ</span>
+  </div>
+  <div class="bottom-nav-item" onclick="openSettings()">
+    <i class="fa fa-cog"></i>
+    <span>Cài đặt</span>
+  </div>
+</nav>
+
+<!-- ─── Mobile floating upload button ──────────────────────── -->
+<button class="fab-upload" onclick="openUploadModal()" title="Tải lên">
+  <i class="fa fa-plus"></i>
+</button>
+
 <!-- ─── Upload Modal ─────────────────────────────────────── -->
 <div id="uploadModal" class="hidden modal-overlay">
   <div class="modal-card" style="max-width:520px">
@@ -700,7 +923,7 @@ input{font-family:inherit}
 <div id="playerModal" class="hidden modal-overlay" style="background:rgba(0,0,0,.92)">
   <div class="modal-card">
     <div class="modal-header" style="border-bottom:none;padding:0 4px 14px">
-      <h3 id="playerTitle" style="font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:16px"></h3>
+      <h3 id="playerTitle" style="flex:1;min-width:0;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:16px"></h3>
       <button class="modal-close" onclick="closePlayer()"><i class="fa fa-times"></i></button>
     </div>
     <div id="playerWrapper">
@@ -749,7 +972,7 @@ input{font-family:inherit}
 
       <!-- Upload API -->
       <div>
-        <div class="section-title"><i class="fa fa-plug" style="color:var(--green)"></i>Upload API</div>
+        <div class="section-title"><i class="fa fa-plug" style="color:var(--green)"></i>Upload API (Lưu ý: dùng https</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div>
             <label class="field-label">Endpoint URL</label>
@@ -767,12 +990,22 @@ input{font-family:inherit}
             </div>
           </div>
           <div class="code-box">
-            curl -X POST <span id="curlEndpoint" style="color:var(--blue)"></span> \<br>
-            &nbsp;&nbsp;-H "Authorization: Bearer <span id="curlToken" style="color:var(--green)">TOKEN</span>" \<br>
-            &nbsp;&nbsp;-F "file=@video.mp4" \<br>
-            &nbsp;&nbsp;-F "path=/" \<br>
+            <!-- curl -X POST "<span id="curlEndpoint" style="color:var(--blue)"></span>" ^<br>
+            &nbsp;&nbsp;-H "Authorization: Bearer <span id="curlToken" style="color:var(--green)">TOKEN</span>" ^<br>
+            &nbsp;&nbsp;-F "file=@video.mp4" ^<br>
+            &nbsp;&nbsp;-F "path=/" ^<br>
+            &nbsp;&nbsp;-F "share=public" -->
+
+            curl -X POST "<span id="curlEndpoint" style="color:var(--blue)"></span>" ^<br>
+            &nbsp;&nbsp;-H "Authorization: Bearer <span id="curlToken" style="color:var(--green)">TOKEN</span>" ^<br>
+            &nbsp;&nbsp;-F "file=@video.mp4" ^<br>
+            &nbsp;&nbsp;-F "path=/" ^<br>
             &nbsp;&nbsp;-F "share=public"
+
           </div>
+          <button class="api-docs-link" onclick="openApiDocsModal()">
+            <i class="fa fa-book"></i> Xem tài liệu API đầy đủ
+          </button>
         </div>
       </div>
 
@@ -784,6 +1017,144 @@ input{font-family:inherit}
           <input id="newPassword" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)" class="field-input">
           <button onclick="changePassword()" class="btn-primary">Đổi mật khẩu</button>
           <div id="pwMsg" style="font-size:.78rem;text-align:center"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── API Docs Modal ───────────────────────────────────── -->
+<div id="apiDocsModal" class="hidden modal-overlay">
+  <div class="modal-card" style="max-width:680px">
+    <div class="modal-header">
+      <h2><i class="fa fa-book" style="margin-right:10px;color:var(--blue)"></i>Tài liệu API</h2>
+      <button class="modal-close" onclick="closeApiDocsModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-body" style="max-height:72vh;overflow-y:auto">
+
+      <button class="docs-back" onclick="closeApiDocsModal();document.getElementById('settingsModal').classList.remove('hidden')">
+        <i class="fa fa-arrow-left"></i> Quay lại Cài đặt
+      </button>
+
+      <p class="docs-desc" style="margin-top:14px">
+        Upload API cho phép ứng dụng/web khác tải file lên TeleCloud thay mặt bạn,
+        xác thực bằng <strong>Bearer token</strong> cố định của tài khoản (xem ở mục Cài đặt).
+        Mọi origin đều được phép gọi (CORS mở), giới hạn dung lượng tối đa
+        <strong id="docsMaxMb">…</strong> MB cho mỗi file.
+      </p>
+
+      <!-- 1. Upload -->
+      <div class="docs-section">
+        <div class="docs-section-head">
+          <span class="docs-method post">POST</span>
+          <span class="docs-path" id="docsUploadPath">/api/upload-api/upload</span>
+        </div>
+        <p class="docs-desc">
+          Tải lên 1 file. Gửi dạng <code>multipart/form-data</code>, kèm header
+          <code>Authorization: Bearer &lt;token&gt;</code>.
+        </p>
+
+        <table class="docs-table">
+          <thead><tr><th>Field</th><th>Kiểu</th><th>Mô tả</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>file</code><span class="docs-tag required">bắt buộc</span></td>
+              <td>file</td>
+              <td>Nội dung file cần tải lên.</td>
+            </tr>
+            <tr>
+              <td><code>path</code><span class="docs-tag optional">tùy chọn</span></td>
+              <td>string</td>
+              <td>Thư mục đích, ví dụ <code>/Videos</code>. Mặc định <code>/</code>.</td>
+            </tr>
+            <tr>
+              <td><code>share</code><span class="docs-tag optional">tùy chọn</span></td>
+              <td>string</td>
+              <td>Đặt giá trị <code>public</code> để tự tạo link chia sẻ ngay sau khi upload xong.</td>
+            </tr>
+            <tr>
+              <td><code>uploadId</code><span class="docs-tag optional">tùy chọn</span></td>
+              <td>string</td>
+              <td>ID tự sinh (vd UUID) dùng để theo dõi tiến trình qua WebSocket ở mục 2 bên dưới.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="field-label" style="margin-top:14px">Phản hồi thành công — 200 OK</p>
+        <div class="code-box">{<br>
+          &nbsp;&nbsp;"success": true,<br>
+          &nbsp;&nbsp;"id": 123,<br>
+          &nbsp;&nbsp;"name": "video.mp4",<br>
+          &nbsp;&nbsp;"size": 10485760,<br>
+          &nbsp;&nbsp;"share_url": "https://host/share/abcdef",&nbsp;<span style="color:var(--text-tertiary)">// chỉ khi share=public</span><br>
+          &nbsp;&nbsp;"direct_url": "https://host/stream/123"&nbsp;<span style="color:var(--text-tertiary)">// chỉ khi share=public</span><br>
+          }
+        </div>
+
+        <p class="field-label" style="margin-top:14px">Phản hồi lỗi</p>
+        <table class="docs-table">
+          <thead><tr><th>HTTP</th><th>Nội dung</th></tr></thead>
+          <tbody>
+            <tr><td>400</td><td><code>{"error": "Thiếu file"}</code></td></tr>
+            <tr><td>401</td><td>Token không hợp lệ hoặc thiếu header Authorization</td></tr>
+            <tr><td>500</td><td><code>{"error": "&lt;chi tiết lỗi&gt;"}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="docs-divider"></div>
+
+      <!-- 2. Progress WS -->
+      <div class="docs-section">
+        <div class="docs-section-head">
+          <span class="docs-method get">WS</span>
+          <span class="docs-path" id="docsWsPath">/api/upload-api/progress/:uploadId?token=...</span>
+        </div>
+        <p class="docs-desc">
+          Theo dõi tiến trình upload theo thời gian thực qua WebSocket. Token được truyền qua
+          query string vì WebSocket handshake không gửi được header Authorization.
+        </p>
+
+        <ol class="docs-steps">
+          <li>Client tự sinh một <code>uploadId</code> ngẫu nhiên (ví dụ UUID).</li>
+          <li>Mở kết nối WebSocket tới endpoint trên <strong>trước</strong> khi upload, dùng cùng <code>uploadId</code>.</li>
+          <li>Gửi <code>POST /api/upload-api/upload</code> kèm field <code>uploadId</code> giống bước 1.</li>
+          <li>Server đẩy JSON mỗi khi tiến trình thay đổi, kết thúc bằng stage <span class="docs-stage">done</span> hoặc <span class="docs-stage">error</span>.</li>
+        </ol>
+
+        <p class="field-label" style="margin-top:10px">Payload đẩy về</p>
+        <div class="code-box">{ "stage": "telegram", "pct": 42, "message": "Đang gửi lên Telegram..." }</div>
+
+        <p class="docs-desc" style="margin-top:10px">
+          <code>stage</code> có thể là <span class="docs-stage">receiving</span>,
+          <span class="docs-stage">telegram</span>, <span class="docs-stage">done</span>
+          hoặc <span class="docs-stage">error</span>. Nếu mở WebSocket mà chưa có session
+          tương ứng (vì chưa POST upload), server sẽ đợi tối đa 10 giây rồi báo lỗi
+          "session không tồn tại hoặc đã hết hạn".
+        </p>
+      </div>
+
+      <div class="docs-divider"></div>
+
+      <!-- 3. Try it -->
+      <div class="docs-section">
+        <div class="docs-section-head">
+          <i class="fa fa-terminal" style="color:var(--text-secondary)"></i>
+          <span style="font-size:.85rem;font-weight:500;color:var(--text-primary)">Ví dụ — curl</span>
+        </div>
+        <div class="docs-copy-row">
+          <div class="code-box" id="docsCurlExample" style="padding-right:40px">Đang tải...</div>
+          <button class="docs-copy-btn" onclick="copyDocsText('docsCurlExample')" title="Copy"><i class="fa fa-copy"></i></button>
+        </div>
+
+        <div class="docs-section-head" style="margin-top:18px">
+          <i class="fa fa-code" style="color:var(--text-secondary)"></i>
+          <span style="font-size:.85rem;font-weight:500;color:var(--text-primary)">Ví dụ — JavaScript (upload + theo dõi tiến trình)</span>
+        </div>
+        <div class="docs-copy-row">
+          <div class="code-box" id="docsJsExample" style="padding-right:40px;white-space:pre-wrap">Đang tải...</div>
+          <button class="docs-copy-btn" onclick="copyDocsText('docsJsExample')" title="Copy"><i class="fa fa-copy"></i></button>
         </div>
       </div>
 
@@ -823,6 +1194,85 @@ input{font-family:inherit}
 
 <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/zhw2590582/ArtPlayer@master/packages/artplayer/dist/i18n/vi.js"></script>
+<script>
+// ─── API Docs Modal: tự lấy dữ liệu từ /api/settings và điền vào ví dụ ───
+let _docsLoaded = false;
+
+async function openApiDocsModal() {
+  document.getElementById('settingsModal').classList.add('hidden');
+  document.getElementById('apiDocsModal').classList.remove('hidden');
+  if (_docsLoaded) return;
+
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) throw new Error('not ok');
+    const data = await res.json();
+
+    document.getElementById('docsMaxMb').textContent = data.max_upload_mb > 0 ? data.max_upload_mb : 'không giới hạn';
+
+    const wsPath = (data.ws_progress_url || '').replace(/^wss?:\/\/[^/]+/, '');
+    document.getElementById('docsWsPath').textContent = wsPath || '/api/upload-api/progress/:uploadId?token=...';
+
+    const curl =
+`curl -X POST "${data.upload_url}" \\
+  -H "Authorization: Bearer ${data.api_token}" \\
+  -F "file=@video.mp4" \\
+  -F "path=/" \\
+  -F "share=public"`;
+    document.getElementById('docsCurlExample').textContent = curl;
+
+    const js =
+`const uploadId = crypto.randomUUID();
+
+// 1. Mở WebSocket theo dõi tiến trình TRƯỚC khi upload
+const ws = new WebSocket(
+  \`${data.ws_progress_url}\`.replace('{uploadId}', uploadId)
+);
+ws.onmessage = (e) => {
+  const { stage, pct, message } = JSON.parse(e.data);
+  console.log(stage, pct, message);
+};
+
+// 2. Upload file kèm cùng uploadId
+const form = new FormData();
+form.append('file', fileInput.files[0]);
+form.append('path', '/');
+form.append('share', 'public');
+form.append('uploadId', uploadId);
+
+const res = await fetch('${data.upload_url}', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ${data.api_token}' },
+  body: form
+});
+const result = await res.json();
+console.log(result);`;
+    document.getElementById('docsJsExample').textContent = js;
+
+    _docsLoaded = true;
+  } catch (e) {
+    document.getElementById('docsCurlExample').textContent = 'Không thể tải dữ liệu, vui lòng thử lại.';
+    document.getElementById('docsJsExample').textContent = 'Không thể tải dữ liệu, vui lòng thử lại.';
+  }
+}
+
+function closeApiDocsModal() {
+  document.getElementById('apiDocsModal').classList.add('hidden');
+}
+
+function copyDocsText(elId) {
+  const text = document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(`#${elId}`).nextElementSibling;
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    const prevClass = icon.className;
+    icon.className = 'fa fa-check';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { icon.className = prevClass; btn.style.color = ''; }, 1200);
+  });
+}
+</script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>
