@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ .title }}</title>
+<meta property="og:title" content="{{ .file.OriginalName }}">
+<meta property="og:type" content="video.other">
+<meta property="og:url" content="{{ .streamURL }}">
+{{ if .thumbURL }}<meta property="og:image" content="{{ .thumbURL }}">{{ end }}
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#ffffff;
+  --bg-sidebar:#f8fafd;
+  --border:#e8eaed;
+  --border-strong:#dadce0;
+  --text-primary:#3c4043;
+  --text-secondary:#5f6368;
+  --text-tertiary:#80868b;
+  --blue:#1a73e8;
+  --blue-hover:#1765cc;
+  --shadow-1:0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+  --shadow-2:0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
+  --font-display:'Google Sans','Roboto',Arial,sans-serif;
+  --font-body:'Roboto',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg-sidebar);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  -webkit-font-smoothing:antialiased;
+}
+.hidden{display:none !important}
+
+/* Navbar */
+.navbar{
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.navbar i.fa-telegram{color:var(--blue);font-size:1.3rem}
+.navbar .brand{font-family:var(--font-display);font-weight:500;color:var(--text-primary)}
+.navbar .sep{color:var(--border-strong)}
+.navbar .sub{color:var(--text-secondary);font-size:.85rem}
+
+/* Main */
+.main{flex:1;max-width:880px;margin:0 auto;width:100%;padding:32px 20px}
+.card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:var(--shadow-1);
+}
+.media-box{background:#202124;display:flex;align-items:center;justify-content:center}
+.media-box #player{width:100%;max-height:70vh}
+.media-box.placeholder{aspect-ratio:16/9}
+.media-box img{max-height:100%;max-width:100%;object-fit:contain}
+.media-box .file-icon-wrap{text-align:center}
+.media-box .file-icon-wrap i{font-size:4rem;color:var(--text-tertiary);margin-bottom:10px;display:block}
+.media-box .file-icon-wrap p{color:var(--text-tertiary);font-size:.85rem;margin:0}
+
+.info{padding:24px}
+.info h1{
+  font-family:var(--font-display);
+  font-size:1.2rem;
+  font-weight:500;
+  color:var(--text-primary);
+  margin:0 0 12px;
+  word-break:break-all;
+}
+.meta-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  font-size:.82rem;
+  color:var(--text-secondary);
+  margin-bottom:22px;
+}
+.meta-row span i{color:var(--text-tertiary);margin-right:6px}
+
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:11px 20px;
+  border-radius:24px;
+  font-size:.875rem;
+  font-weight:500;
+  text-decoration:none;
+  cursor:pointer;
+  border:none;
+  transition:background .15s, box-shadow .15s;
+}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:var(--shadow-1)}
+.btn-primary:hover{background:var(--blue-hover);box-shadow:var(--shadow-2)}
+.btn-secondary{background:#fff;color:var(--text-primary);border:1px solid var(--border-strong)}
+.btn-secondary:hover{background:var(--bg-sidebar)}
+
+footer{text-align:center;padding:20px;color:var(--text-tertiary);font-size:.78rem}
+footer a{color:var(--text-secondary);text-decoration:none}
+footer a:hover{color:var(--blue)}
+
+#toast{position:fixed;bottom:24px;right:24px}
+#toast .toast-inner{
+  background:var(--text-primary);
+  color:#fff;
+  padding:12px 18px;
+  border-radius:8px;
+  font-size:.85rem;
+  box-shadow:var(--shadow-2);
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <i class="fa-brands fa-telegram"></i>
+  <span class="brand">StreamAPI</span>
+  <span class="sep">·</span>
+  <span class="sub">Chia sẻ file</span>
+</nav>
+
+<main class="main">
+  <div class="card">
+
+    {{ if .file.IsVideo }}
+    <div class="media-box">
+      <div id="player" style="width:100%;aspect-ratio:16/9"></div>
+    </div>
+    {{ else if .thumbURL }}
+    <div class="media-box placeholder">
+      <img src="{{ .thumbURL }}">
+    </div>
+    {{ else }}
+    <div class="media-box placeholder">
+      <div class="file-icon-wrap">
+        <i class="fa fa-file"></i>
+        <p>{{ .file.MimeType }}</p>
+      </div>
+    </div>
+    {{ end }}
+
+    <div class="info">
+      <h1>{{ .file.OriginalName }}</h1>
+      <div class="meta-row">
+        <span><i class="fa fa-hard-drive"></i>{{ .sizeStr }}</span>
+        <span><i class="fa fa-calendar"></i>{{ .file.UploadedAt }}</span>
+        {{ if .file.Duration }}<span><i class="fa fa-clock"></i>{{ .file.Duration }}s</span>{{ end }}
+      </div>
+
+      <div class="actions">
+        <a href="{{ .streamURL }}" download="{{ .file.OriginalName }}" class="btn btn-primary">
+          <i class="fa fa-download"></i> Tải xuống
+        </a>
+        <button onclick="copyStreamURL()" class="btn btn-secondary">
+          <i class="fa fa-link"></i> Copy link stream
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Powered by <a href="/">StreamAPI</a>
+</footer>
+
+<div id="toast" class="hidden">
+  <div class="toast-inner">Link đã copy!</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/zhw2590582/ArtPlayer@master/packages/artplayer/dist/i18n/vi.js"></script>
+<script>
+{{ if .file.IsVideo }}
+const player = new Artplayer({
+  container: '#player',
+  url: '{{ .streamURL }}',
+  title: '{{ .file.OriginalName }}',
+  lang: 'vi',
+  volume: 1,
+  autoSize: false,
+  fullscreen: true,
+  fullscreenWeb: true,
+  playbackRate: true,
+  aspectRatio: true,
+  pip: true,
+  airplay: true,
+  setting: true,
+  theme: '#1a73e8',
+});
+{{ end }}
+
+function copyStreamURL() {
+  navigator.clipboard.writeText('{{ .streamURL }}').then(() => {
+    const t = document.getElementById('toast');
+    t.classList.remove('hidden');
+    setTimeout(() => t.classList.add('hidden'), 2000);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ .title }}</title>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#ffffff;
+  --bg-sidebar:#f8fafd;
+  --border:#e8eaed;
+  --border-strong:#dadce0;
+  --text-primary:#3c4043;
+  --text-secondary:#5f6368;
+  --text-tertiary:#80868b;
+  --blue:#1a73e8;
+  --blue-hover:#1765cc;
+  --red:#d93025;
+  --red-bg:#fce8e6;
+  --green:#1e8e3e;
+  --green-bg:#e6f4ea;
+  --shadow-1:0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+  --shadow-2:0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
+  --font-display:'Google Sans','Roboto',Arial,sans-serif;
+  --font-body:'Roboto',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg-sidebar);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  -webkit-font-smoothing:antialiased;
+  padding:16px;
+}
+.auth-wrap{width:100%;max-width:400px}
+.auth-brand{text-align:center;margin-bottom:28px}
+.auth-brand i{font-size:2.75rem;color:var(--blue);margin-bottom:10px;display:block}
+.auth-brand h1{
+  font-family:var(--font-display);
+  font-size:1.5rem;
+  font-weight:500;
+  color:var(--text-primary);
+  margin:0;
+}
+.auth-brand p{font-size:.85rem;color:var(--text-secondary);margin:6px 0 0}
+
+.auth-card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:36px 32px;
+  box-shadow:var(--shadow-2);
+}
+.auth-card h2{
+  font-family:var(--font-display);
+  font-size:1.15rem;
+  font-weight:500;
+  text-align:center;
+  margin:0 0 24px;
+  color:var(--text-primary);
+}
+
+.error-box{
+  background:var(--red-bg);
+  border:1px solid #f6c7c3;
+  color:var(--red);
+  font-size:.85rem;
+  border-radius:8px;
+  padding:11px 14px;
+  margin-bottom:16px;
+}
+.success-box{
+  background:var(--green-bg);
+  border:1px solid #b7dfbf;
+  color:var(--green);
+  font-size:.85rem;
+  border-radius:8px;
+  padding:11px 14px;
+  margin-bottom:16px;
+}
+
+.field{margin-bottom:16px}
+.field label{
+  font-size:.75rem;
+  color:var(--text-secondary);
+  display:block;
+  margin-bottom:6px;
+}
+.field-wrap{position:relative}
+.field-wrap i{
+  position:absolute;left:13px;top:50%;
+  transform:translateY(-50%);
+  color:var(--text-tertiary);
+  font-size:.85rem;
+}
+.field-wrap input{
+  width:100%;
+  background:#fff;
+  border:1px solid var(--border-strong);
+  border-radius:6px;
+  padding:11px 14px 11px 38px;
+  font-size:.9rem;
+  color:var(--text-primary);
+  outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.field-wrap input:focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.field-wrap input::placeholder{color:var(--text-tertiary)}
+
+.btn-submit{
+  width:100%;
+  background:var(--blue);
+  color:#fff;
+  border:none;
+  border-radius:24px;
+  padding:12px;
+  font-size:.9rem;
+  font-weight:500;
+  cursor:pointer;
+  transition:background .15s;
+  margin-bottom:16px;
+}
+.btn-submit:hover{background:var(--blue-hover)}
+.btn-submit:disabled{opacity:.6;cursor:default}
+
+.login-link{
+  text-align:center;
+  font-size:.85rem;
+  color:var(--text-secondary);
+}
+.login-link a{
+  color:var(--blue);
+  text-decoration:none;
+  font-weight:500;
+}
+.login-link a:hover{text-decoration:underline}
+
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-brand">
+    <i class="fa-brands fa-telegram"></i>
+    <h1>StreamAPI</h1>
+    <p>Dịch vụ StreamAPI miễn phí</p>
+  </div>
+
+  <div class="auth-card">
+    <h2>Tạo tài khoản</h2>
+
+    <div id="errorMsg" class="error-box hidden"></div>
+    <div id="successMsg" class="success-box hidden"></div>
+
+    <div class="field">
+      <label>Tên đăng nhập</label>
+      <div class="field-wrap">
+        <i class="fa fa-user"></i>
+        <input id="username" type="text" placeholder="Nhập tên đăng nhập" autofocus
+          onkeydown="if(event.key==='Enter') register()">
+      </div>
+    </div>
+    <div class="field">
+      <label>Mật khẩu</label>
+      <div class="field-wrap">
+        <i class="fa fa-lock"></i>
+        <input id="password" type="password" placeholder="Ít nhất 6 ký tự"
+          onkeydown="if(event.key==='Enter') register()">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:24px">
+      <label>Xác nhận mật khẩu</label>
+      <div class="field-wrap">
+        <i class="fa fa-lock"></i>
+        <input id="confirm" type="password" placeholder="Nhập lại mật khẩu"
+          onkeydown="if(event.key==='Enter') register()">
+      </div>
+    </div>
+
+    <button onclick="register()" id="registerBtn" class="btn-submit">Đăng ký</button>
+    <div class="login-link">Đã có tài khoản? <a href="/login">Đăng nhập</a></div>
+  </div>
+</div>
+
+<script>
+async function register() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const confirm  = document.getElementById('confirm').value;
+  const btn      = document.getElementById('registerBtn');
+  const errEl    = document.getElementById('errorMsg');
+  const okEl     = document.getElementById('successMsg');
+
+  errEl.classList.add('hidden');
+  okEl.classList.add('hidden');
+
+  if (!username || !password || !confirm) {
+    errEl.textContent = 'Vui lòng điền đầy đủ thông tin';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password.length < 6) {
+    errEl.textContent = 'Mật khẩu phải có ít nhất 6 ký tự';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password !== confirm) {
+    errEl.textContent = 'Mật khẩu xác nhận không khớp';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Đang đăng ký...';
+
+  try {
+    const form = new FormData();
+    form.append('username', username);
+    form.append('password', password);
+
+    const res  = await fetch('/register', { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (res.ok) {
+      okEl.textContent = 'Đăng ký thành công! Đang chuyển hướng...';
+      okEl.classList.remove('hidden');
+      setTimeout(() => window.location.href = '/login', 1500);
+    } else {
+      errEl.textContent = data.error || 'Đăng ký thất bại';
+      errEl.classList.remove('hidden');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Đăng ký';
+  }
+}
+</script>
+</body>
+</html>
