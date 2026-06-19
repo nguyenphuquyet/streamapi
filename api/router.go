@@ -55,10 +55,14 @@ func SetupRouter() *gin.Engine {
 	// ══════════════════════════════════════════════════════════════════════════
 	
 	// Stream public - KHÔNG cần đăng nhập
+	// Đăng ký thêm HEAD vì Gin không tự map HEAD vào handler GET; nhiều
+	// video player gửi HEAD trước để lấy Content-Length/Accept-Ranges.
 	r.GET("/stream/:id", HandleStream)
+	r.HEAD("/stream/:id", HandleStream)
 	
 	// Stream public qua token (share)
 	r.GET("/stream/share/:token", HandleStreamByToken)
+	r.HEAD("/stream/share/:token", HandleStreamByToken)
 	
 	// OPTIONAL: Stream có signed URL (bảo mật hơn)
 	// r.GET("/stream/signed/:id", HandleSignedStream)

@@ -632,13 +632,15 @@ func HandleStreamByToken(c *gin.Context) {
 }
 
 func serveFileStream(c *gin.Context, file *database.FileRecord) {
-	rangeHeader := c.GetHeader("Range")
+	rawRange := c.GetHeader("Range")
+	hasRange := rawRange != ""
+
 	var start, end int64
 	totalSize := file.Size
 
-	if rangeHeader != "" {
-		rangeHeader = strings.TrimPrefix(rangeHeader, "bytes=")
-		parts := strings.SplitN(rangeHeader, "-", 2)
+	if hasRange {
+		trimmed := strings.TrimPrefix(rawRange, "bytes=")
+		parts := strings.SplitN(trimmed, "-", 2)
 		if len(parts) == 2 {
 			start, _ = strconv.ParseInt(parts[0], 10, 64)
 			if parts[1] != "" {
@@ -660,7 +662,29 @@ func serveFileStream(c *gin.Context, file *database.FileRecord) {
 		return
 	}
 
-	reader, length, err := tgclient.TG.DownloadFileRange(
+	statusCode := http.StatusOK
+	if hasRange {
+		statusCode = http.StatusPartialContent
+	}
+	contentLength := end - start + 1
+
+	c.Header("Content-Type", file.MimeType)
+	c.Header("Content-Length", strconv.FormatInt(contentLength, 10))
+	c.Header("Accept-Ranges", "bytes")
+	c.Header("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, file.OriginalName))
+	if hasRange {
+		c.Header("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, totalSize))
+	}
+	c.Header("Cache-Control", "no-store")
+
+	// HEAD: chỉ trả header (size, range support, mime type...) để client/player
+	// dò thông tin trước, không cần tải dữ liệu thật từ Telegram.
+	if c.Request.Method == http.MethodHead {
+		c.Status(statusCode)
+		return
+	}
+
+	reader, _, err := tgclient.TG.DownloadFileRange(
 		c.Request.Context(),
 		file.ChatID,
 		file.MessageID,
@@ -675,20 +699,6 @@ func serveFileStream(c *gin.Context, file *database.FileRecord) {
 		return
 	}
 	defer reader.Close()
-
-	statusCode := http.StatusOK
-	if rangeHeader != "" {
-		statusCode = http.StatusPartialContent
-	}
-
-	c.Header("Content-Type", file.MimeType)
-	c.Header("Content-Length", strconv.FormatInt(length, 10))
-	c.Header("Accept-Ranges", "bytes")
-	c.Header("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, file.OriginalName))
-	if rangeHeader != "" {
-		c.Header("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, totalSize))
-	}
-	c.Header("Cache-Control", "no-store")
 
 	c.Status(statusCode)
 	io.Copy(c.Writer, reader)
