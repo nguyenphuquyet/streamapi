@@ -42,6 +42,11 @@ func SetupRouter() *gin.Engine {
 	r.GET("/register", HandleRegisterPage)
 	r.POST("/register", HandleRegisterSubmit)
 
+	// Health check
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	})
+
 	// Share page (public)
 	r.GET("/share/:token", HandleSharePage)
 
