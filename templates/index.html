@@ -1076,7 +1076,7 @@ input{font-family:inherit}
             <tr>
               <td><code>uploadId</code><span class="docs-tag optional">tùy chọn</span></td>
               <td>string</td>
-              <td>ID tự sinh (vd UUID) dùng để theo dõi tiến trình qua WebSocket ở mục 2 bên dưới.</td>
+              <td>ID tự sinh (vd UUID) dùng để theo dõi tiến trình qua SSE ở mục 2 bên dưới.</td>
             </tr>
           </tbody>
         </table>
@@ -1105,33 +1105,34 @@ input{font-family:inherit}
 
       <div class="docs-divider"></div>
 
-      <!-- 2. Progress WS -->
+      <!-- 2. Progress SSE -->
       <div class="docs-section">
         <div class="docs-section-head">
-          <span class="docs-method get">WS</span>
+          <span class="docs-method get">SSE</span>
           <span class="docs-path" id="docsWsPath">/api/upload-api/progress/:uploadId?token=...</span>
         </div>
         <p class="docs-desc">
-          Theo dõi tiến trình upload theo thời gian thực qua WebSocket. Token được truyền qua
-          query string vì WebSocket handshake không gửi được header Authorization.
+          Theo dõi tiến trình upload theo thời gian thực qua <strong>Server-Sent Events</strong>.
+          Token truyền qua query string vì <code>EventSource</code> không gửi được header Authorization.
         </p>
 
         <ol class="docs-steps">
           <li>Client tự sinh một <code>uploadId</code> ngẫu nhiên (ví dụ UUID).</li>
-          <li>Mở kết nối WebSocket tới endpoint trên <strong>trước</strong> khi upload, dùng cùng <code>uploadId</code>.</li>
+          <li>Mở kết nối SSE tới endpoint trên <strong>trước</strong> khi upload, dùng cùng <code>uploadId</code>.</li>
           <li>Gửi <code>POST /api/upload-api/upload</code> kèm field <code>uploadId</code> giống bước 1.</li>
-          <li>Server đẩy JSON mỗi khi tiến trình thay đổi, kết thúc bằng stage <span class="docs-stage">done</span> hoặc <span class="docs-stage">error</span>.</li>
+          <li>Server đẩy SSE event mỗi khi tiến trình thay đổi, kết thúc bằng event <span class="docs-stage">done</span> hoặc <span class="docs-stage">error</span>. Nhớ gọi <code>.close()</code> sau khi nhận.</li>
         </ol>
 
-        <p class="field-label" style="margin-top:10px">Payload đẩy về</p>
-        <div class="code-box">{ "stage": "telegram", "pct": 42, "message": "Đang gửi lên Telegram..." }</div>
+        <p class="field-label" style="margin-top:10px">Định dạng event SSE</p>
+        <div class="code-box">event: telegram<br>data: {"pct": 42, "message": "Đang gửi lên Telegram..."}</div>
 
         <p class="docs-desc" style="margin-top:10px">
-          <code>stage</code> có thể là <span class="docs-stage">receiving</span>,
+          Tên event (<code>event:</code>) chính là <code>stage</code>, có thể là
+          <span class="docs-stage">receiving</span>,
           <span class="docs-stage">telegram</span>, <span class="docs-stage">done</span>
-          hoặc <span class="docs-stage">error</span>. Nếu mở WebSocket mà chưa có session
-          tương ứng (vì chưa POST upload), server sẽ đợi tối đa 10 giây rồi báo lỗi
-          "session không tồn tại hoặc đã hết hạn".
+          hoặc <span class="docs-stage">error</span>. Lắng nghe từng stage bằng
+          <code>addEventListener('receiving', …)</code>. Nếu mở SSE mà chưa có session
+          tương ứng, server sẽ đợi tối đa 30 giây rồi gửi event <span class="docs-stage">error</span>.
         </p>
       </div>
 
@@ -1210,8 +1211,8 @@ async function openApiDocsModal() {
 
     document.getElementById('docsMaxMb').textContent = data.max_upload_mb > 0 ? data.max_upload_mb : 'không giới hạn';
 
-    const wsPath = (data.ws_progress_url || '').replace(/^wss?:\/\/[^/]+/, '');
-    document.getElementById('docsWsPath').textContent = wsPath || '/api/upload-api/progress/:uploadId?token=...';
+    const ssePath = (data.sse_progress_url || '').replace(/^https?:\/\/[^/]+/, '');
+    document.getElementById('docsWsPath').textContent = ssePath || '/api/upload-api/progress/:uploadId?token=...';
 
     const curl =
 `curl -X POST "${data.upload_url}" \\
@@ -1224,14 +1225,27 @@ async function openApiDocsModal() {
     const js =
 `const uploadId = crypto.randomUUID();
 
-// 1. Mở WebSocket theo dõi tiến trình TRƯỚC khi upload
-const ws = new WebSocket(
-  \`${data.ws_progress_url}\`.replace('{uploadId}', uploadId)
-);
-ws.onmessage = (e) => {
-  const { stage, pct, message } = JSON.parse(e.data);
-  console.log(stage, pct, message);
-};
+// 1. Mở SSE theo dõi tiến trình TRƯỚC khi upload
+const sseUrl = \`${data.sse_progress_url}\`.replace('{uploadId}', uploadId);
+const es = new EventSource(sseUrl);
+
+es.addEventListener('receiving', (e) => {
+  const { pct, message } = JSON.parse(e.data);
+  console.log('receiving', pct, message);
+});
+es.addEventListener('telegram', (e) => {
+  const { pct, message } = JSON.parse(e.data);
+  console.log('telegram', pct, message);
+});
+es.addEventListener('done', (e) => {
+  const { pct, message } = JSON.parse(e.data);
+  console.log('done', pct, message);
+  es.close();
+});
+es.addEventListener('error', (e) => {
+  console.error('error', e.data ? JSON.parse(e.data) : e);
+  es.close();
+});
 
 // 2. Upload file kèm cùng uploadId
 const form = new FormData();

@@ -104,11 +104,11 @@ func SetupRouter() *gin.Engine {
 	// header CORS rồi abort sớm.
 	r.OPTIONS("/api/upload-api/upload", corsForUploadAPI())
 
-	// Tiến trình upload qua WebSocket cho Upload API.
-	// Đặt NGOÀI group uploadAPI vì cần middleware xác thực riêng: WebSocket
-	// handshake từ trình duyệt không gửi được header Authorization, nên token
-	// được chấp nhận qua query string (?token=...).
-	r.GET("/api/upload-api/progress/:uploadId", middleware.RequireAPITokenWS(), HandleUploadAPIProgressWS)
+	// Tiến trình upload qua SSE cho Upload API.
+	// Đặt NGOÀI group uploadAPI vì EventSource API của trình duyệt không gửi
+	// được header Authorization, nên token được chấp nhận qua query string
+	// (?token=...) — cùng cơ chế với WebSocket trước đây.
+	r.GET("/api/upload-api/progress/:uploadId", corsForUploadAPI(), middleware.RequireAPITokenWS(), HandleUploadAPIProgressSSE)
 
 	return r
 }

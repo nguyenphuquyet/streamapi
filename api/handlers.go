@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"telecloud/config"
@@ -453,7 +454,12 @@ func HandleUpload(c *gin.Context) {
 
 	var st *progressState
 	if uploadID != "" {
-		st = hub.newProgressState(uploadID)
+		// Tổng kích thước tất cả file để tính TTL session chính xác.
+		var totalSize int64
+		for _, fh := range files {
+			totalSize += fh.Size
+		}
+		st = hub.newProgressState(uploadID, totalSize)
 	}
 
 	results := make([]UploadResult, 0, len(files))
@@ -481,6 +487,25 @@ func HandleUpload(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"results": results})
 }
 
+// progressReader wrap một io.Reader và báo cáo tiến trình đọc qua callback.
+type progressReader struct {
+	r        io.Reader
+	total    int64
+	read     int64
+	callback func(read, total int64)
+}
+
+func (pr *progressReader) Read(p []byte) (n int, err error) {
+	n, err = pr.r.Read(p)
+	if n > 0 {
+		pr.read += int64(n)
+		if pr.callback != nil {
+			pr.callback(pr.read, pr.total)
+		}
+	}
+	return
+}
+
 func processUpload(ctx context.Context, userID int64, fileHeader *multipart.FileHeader, path string, st *progressState) (*database.FileRecord, int64, error) {
 	cfg := config.App
 
@@ -506,7 +531,25 @@ func processUpload(ctx context.Context, userID int64, fileHeader *multipart.File
 	if isVideo && cfg.FFmpegPath != "disabled" {
 		tmpPath = filepath.Join(cfg.TempDir, safeName)
 
-		if err := saveTempFile(f, tmpPath); err == nil {
+		// Track tiến trình ghi temp file (phase "receiving": server đang nhận từ client).
+		var writerSrc io.Reader = f
+		if st != nil {
+			st.set("receiving", 0, "Đang nhận file...")
+			writerSrc = &progressReader{
+				r:     f,
+				total: fileHeader.Size,
+				callback: func(read, total int64) {
+					if total <= 0 {
+						return
+					}
+					// 0-50% cho phase receiving (thay vì 90%)
+					pct := int(read * 50 / total)
+					st.set("receiving", pct, "Đang nhận file...")
+				},
+			}
+		}
+
+		if err := saveTempFile(writerSrc, tmpPath); err == nil {
 			tmpFile, err = os.Open(tmpPath)
 			if err == nil {
 				duration, width, height = utils.GetVideoInfo(cfg.FFmpegPath, tmpPath)
@@ -550,14 +593,58 @@ func processUpload(ctx context.Context, userID int64, fileHeader *multipart.File
 	if st != nil {
 		st.set("telegram", 0, "Đang gửi lên Telegram...")
 	}
-	result, err := tgclient.TG.UploadFile(ctx, reader, safeName, fileHeader.Size, mimeType, func(read, total int64) {
+
+	// Với file không phải video (không lưu temp), phase "receiving" và "telegram"
+	// diễn ra đồng thời — server đọc từ client rồi stream thẳng lên Telegram.
+	// Ta dùng tỉ lệ 50/50: 0-50% = receiving, 50-99% = telegram push.
+	var uploadReader io.Reader = reader
+	if st != nil && tmpFile == nil {
+		// Không có temp file → wrap reader để báo cáo progress kết hợp.
+		uploadReader = &progressReader{
+			r:     reader,
+			total: fileHeader.Size,
+			callback: func(read, total int64) {
+				if total <= 0 {
+					return
+				}
+				// Giai đoạn đọc từ client chiếm 50% đầu.
+				pct := int(read * 50 / total)
+				st.set("receiving", pct, "Đang nhận file...")
+			},
+		}
+	}
+
+	// maxTelegramPct ghi nhận mốc % cao nhất đã báo cho phase "telegram".
+	// tgclient.UploadFile có retry nội bộ (tối đa 3 lần) khi 1 part lỗi giữa
+	// đường: lúc retry, nó gọi lại up.Upload() từ đầu nên callback Chunk()
+	// báo "uploaded" tụt về 0, khiến pct hiển thị tụt từ ~96% xuống 50%.
+	// Ta chặn bằng cách không bao giờ set pct thấp hơn mốc cao nhất đã đạt.
+	// Dùng mutex vì uploader chạy WithThreads(4) → Chunk() có thể gọi song song.
+	var progressMu sync.Mutex
+	var maxTelegramPct int
+	result, err := tgclient.TG.UploadFile(ctx, uploadReader, safeName, fileHeader.Size, mimeType, func(read, total int64) {
 		if st == nil || total <= 0 {
 			return
 		}
-		pct := int(read * 100 / total)
+		// Receiving đã xong (0-50%), telegram chiếm 50-99%, dù video hay không.
+		pct := 50 + int(read*49/total)
 		if pct > 99 {
 			pct = 99
 		}
+
+		progressMu.Lock()
+		if pct < maxTelegramPct {
+			// Đang trong 1 lần retry sau khi lần trước fail giữa đường —
+			// giữ nguyên mốc cao nhất, chỉ đổi message để người dùng biết
+			// đang thử lại, không làm thanh progress chạy lùi.
+			pct = maxTelegramPct
+			progressMu.Unlock()
+			st.set("telegram", pct, "Đang gửi lên Telegram... (đang thử lại)")
+			return
+		}
+		maxTelegramPct = pct
+		progressMu.Unlock()
+
 		st.set("telegram", pct, "Đang gửi lên Telegram...")
 	})
 	if err != nil {
@@ -742,19 +829,17 @@ func HandleAPIGetSettings(c *gin.Context) {
 
 	cfg := config.App
 	scheme := "http"
-	wsScheme := "ws"
 	if c.Request.TLS != nil {
 		scheme = "https"
-		wsScheme = "wss"
 	}
 	host := c.Request.Host
 
 	c.JSON(http.StatusOK, gin.H{
-		"username":        user.Username,
-		"api_token":       user.APIToken,
-		"upload_url":      fmt.Sprintf("%s://%s/api/upload-api/upload", scheme, host),
-		"ws_progress_url": fmt.Sprintf("%s://%s/api/upload-api/progress/{uploadId}?token=%s", wsScheme, host, user.APIToken),
-		"max_upload_mb":   cfg.MaxUploadSizeMB,
+		"username":         user.Username,
+		"api_token":        user.APIToken,
+		"upload_url":       fmt.Sprintf("%s://%s/api/upload-api/upload", scheme, host),
+		"sse_progress_url": fmt.Sprintf("%s://%s/api/upload-api/progress/{uploadId}?token=%s", scheme, host, user.APIToken),
+		"max_upload_mb":    cfg.MaxUploadSizeMB,
 	})
 }
 
@@ -815,9 +900,10 @@ func HandleUploadAPI(c *gin.Context) {
 
 	// Nếu client gửi kèm uploadId, tạo progressState để client có thể theo dõi
 	// tiến trình qua WebSocket tại /api/upload-api/progress/:uploadId.
+	// TTL session được tính động theo kích thước file.
 	var st *progressState
 	if uploadID != "" {
-		st = hub.newProgressState(uploadID)
+		st = hub.newProgressState(uploadID, fileHeader.Size)
 	}
 
 	_, id, err := processUpload(c.Request.Context(), user.ID, fileHeader, path, st)
