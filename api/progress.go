@@ -42,7 +42,7 @@ func sessionTTL(fileSizeBytes int64) time.Duration {
 	const uploadSpeedBps = 2 * 1024 * 1024 // 2 MB/s (conservative)
 	const safetyFactor = 3
 	const minTTL = 10 * time.Minute
-	const maxTTL = 3 * time.Hour
+	const maxTTL = 8 * time.Hour
 	const fixedBuffer = 5 * time.Minute
 
 	if fileSizeBytes <= 0 {
